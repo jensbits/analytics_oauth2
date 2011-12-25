@@ -4,7 +4,7 @@ $client_id = "YOUR-CLIENT-ID.apps.googleusercontent.com";
 
 $client_secret = "YOUR-CLIENT-SECRET";
 
-$redirect_uri = "YOUR-CLIENT-REDIRECT-URL";
+$redirect_uri = "YOUR-REDIRECT-URL";
 
 $scope = "https://www.googleapis.com/auth/analytics.readonly";
 
