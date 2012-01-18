@@ -1,15 +1,15 @@
 <?php
 
-$client_id = "YOUR-CLIENT-ID.apps.googleusercontent.com";
+$client_id = "1083852050270.apps.googleusercontent.com";
 
-$client_secret = "YOUR-CLIENT-SECRET";
+$client_secret = "XxOb88cwfSTqiqMMKoyLEq8i";
 
-$redirect_uri = "YOUR-CLIENT-REDIRECT-URL";
+$redirect_uri = "http://www.jensbits.com/demos/analytics_oauth2/index.php";
 
 $scope = "https://www.googleapis.com/auth/analytics.readonly";
 
-$state = "profile"; //optional
+$state = "profile";
 
-$access_type = "offline"; //optional online is default if left out
+$access_type = "offline";
 
 ?>
