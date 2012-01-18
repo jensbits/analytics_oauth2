@@ -29,6 +29,7 @@ $redirect_uri = "YOUR-REDIRECT-URL";
 =======
 $redirect_uri = "YOUR-REDIRECT-URL";
 >>>>>>> e761612ebaa626b0e5fe627b25c858dc96e483e7
+$redirect_uri = "YOUR-REDIRECT-URL";
 
 $scope = "https://www.googleapis.com/auth/analytics.readonly";
 
