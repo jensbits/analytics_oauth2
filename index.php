@@ -177,9 +177,9 @@ function parse_data($requestUrl,$accessToken){
 
 function dbRefreshToken($name,$scope,$refreshToken = ""){
 	global $serverpath;
-	$path = $serverpath."/config/token_config.php";
+	$path = $serverpath."/PATH/token_config.php";
 	include_once($path);
-	$path = $serverpath."/config/db.php";
+	$path = $serverpath."/PATH/db.php";
 	include_once($path);
 
 	if ($conn){
