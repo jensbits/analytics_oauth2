@@ -112,13 +112,13 @@ div.ui-datepicker {font-size: 80%;}
 .errorMessage {
 	color: #D8000C;
 	background-color: #ffbaba;
-	background-image: url('images/error.gif');
+	background-image: url('http://jensbits.com/images/error.gif');
 }
 
 .successMessage {
 	color:#4f8a10;
 	background-color: #dff2bf; 
-	background-image: url('images/success.gif');
+	background-image: url('http://jensbits.com/images/success.gif');
 }
 
 table.dataTable{

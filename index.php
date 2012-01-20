@@ -1,6 +1,6 @@
 <?php
-$path = $_SERVER['DOCUMENT_ROOT'];
-$path .= "/inc/vars.inc";
+$serverpath = $_SERVER['DOCUMENT_ROOT'];
+$path = $serverpath . "/demos/analytics_oauth2/inc/vars.inc";
 include_once($path);
 
 //so session vars can be used
@@ -8,7 +8,7 @@ session_start();
 
 //Oauth 2.0: exchange token for session token so multiple calls can be made to api
 if(isset($_REQUEST['code'])){
-	$_SESSION['accessToken'] = get_oauth2_token($_REQUEST['code']);
+	$_SESSION['analyticAccessToken'] = get_oauth2_token($_REQUEST['code']);
 }
 
 if(isset($_REQUEST['logout'])){
@@ -17,7 +17,6 @@ if(isset($_REQUEST['logout'])){
 }
 //set form vars
 if(isset($_POST['profileid'])){	
-
 	$start_date = $_POST['startdate'];
 	$end_date = $_POST['enddate'];
 
@@ -84,15 +83,15 @@ function get_oauth2_token($code) {
 	if (isset($authObj->refresh_token)){
 		global $refreshToken;
 		$refreshToken = $authObj->refresh_token;
-		//var_dump($authObj->refresh_token);
-		//exit;
+		$_SESSION['refreshToken'] = $refreshToken;
 	}
 			  
 	$accessToken = $authObj->access_token;
 	return $accessToken;
 }
+
 //returns new access token from refresh token for calls to API using oauth 2.0
-function get_oauth2_refresh_token($code) {
+function get_oauth2_token_refresh_token($rtoken) {
 	global $client_id;
 	global $client_secret;
 	//get from db
@@ -102,10 +101,10 @@ function get_oauth2_refresh_token($code) {
 	$clienttoken_post = array(
 	"client_id" => $client_id,
 	"client_secret" => $client_secret,
-	"refresh_token" => $stored_refresh_token,
+	"refresh_token" => $rtoken,
 	"grant_type" => "refresh_token"
 	);
-	
+
 	$curl = curl_init($oauth2token_url);
 
 	curl_setopt($curl, CURLOPT_POST, true);
@@ -115,7 +114,6 @@ function get_oauth2_refresh_token($code) {
 
 	$json_response = curl_exec($curl);
 	curl_close($curl);
-
 	$authObj = json_decode($json_response);	  
 	$accessToken = $authObj->access_token;
 	return $accessToken;
@@ -140,18 +138,12 @@ function call_api($accessToken,$url){
 
 //returns profile list as array	
 function parse_profile_list($accountObj){
-	
-		$i = 0;
-		$profiles = array();
-		//global $refreshToken;
-		//if (isset($refreshToken)){
-			//var_dump($accountObj->username);
-		//exit;
-		//}
+	$i = 0;
+	$profiles = array();
 		
-		$profilesObj = call_api($_SESSION['accessToken'],"https://www.googleapis.com/analytics/v3/management/accounts/~all/webproperties/~all/profiles");
+	$profilesObj = call_api($_SESSION['analyticAccessToken'],"https://www.googleapis.com/analytics/v3/management/accounts/~all/webproperties/~all/profiles");
 		
-		foreach($profilesObj->items as $profile)
+	foreach($profilesObj->items as $profile)
 		{
 			$profiles[$i] = array();
 			$profiles[$i]["name"] = $profile->name;
@@ -159,13 +151,12 @@ function parse_profile_list($accountObj){
 			$i++;
 		}
 		
-		return $profiles;	
+	return $profiles;	
 }
 
 //returns data as array	
-function parse_data($requestUrl){
-	
-	$dataObj = call_api($_SESSION['accessToken'],$requestUrl);
+function parse_data($requestUrl,$accessToken){
+	$dataObj = call_api($accessToken,$requestUrl);
 
 	$r = 0;
 	$results = array();
@@ -182,6 +173,37 @@ function parse_data($requestUrl){
 		$r++;
 	}	
 	return $results;
+}
+
+function dbRefreshToken($name,$scope,$refreshToken = ""){
+	global $serverpath;
+	$path = $serverpath."/config/token_config.php";
+	include_once($path);
+	$path = $serverpath."/config/db.php";
+	include_once($path);
+
+	if ($conn){
+		if (strlen($refreshToken)){
+			//if refreshToken in param list, save to db
+			$query = "INSERT INTO tokens (name, scope, token) VALUES (:name, :scope, :refreshToken)";
+			$result = $conn->prepare($query); 
+			$result->bindValue(':name', $name, PDO::PARAM_STR);
+			$result->bindValue(':scope', $scope, PDO::PARAM_STR);
+			$result->bindValue(':refreshToken', $refreshToken, PDO::PARAM_STR);
+			$result->execute(); 
+		} else {
+			//else retrieve refresh token from db and return new access token
+			$query = "SELECT token from tokens where name = :name and scope = :scope";
+			$result = $conn->prepare($query);
+			$result->bindValue(':name',$name, PDO::PARAM_STR);
+			$result->bindValue(':scope', $scope, PDO::PARAM_STR);
+			$result->execute();
+			$row = $result->fetch(PDO::FETCH_ASSOC);
+			$accessTokenfromRefresh = get_oauth2_token_refresh_token($row["token"]);
+			return $accessTokenfromRefresh;
+		}
+		mysql_close($conn);
+	}
 }
 ?>
 <!DOCTYPE html>
@@ -200,13 +222,25 @@ function parse_data($requestUrl){
 
 <script>
 $(function() {
-		$("#startdate, #enddate").datepicker({showOn: 'button', buttonImage: 'SmallCalendar.gif', buttonImageOnly: true, dateFormat: 'dd-MM-yy', altFormat: 'yy-mm-dd', maxDate: -1});
+	$("#startdate, #enddate").datepicker({showOn: 'button', buttonImage: 'SmallCalendar.gif', buttonImageOnly: true, dateFormat: 'dd-MM-yy', altFormat: 'yy-mm-dd', maxDate: -1});
 		
-		$("#startdate").datepicker("option",{altField: '#start_alternate', minDate: new Date(2009, 8 - 1, 1)});
-		$("#enddate").datepicker("option", {altField: '#end_alternate', minDate: new Date(2009, 8 - 1, 2)});		
+	$("#startdate").datepicker("option",{altField: '#start_alternate', minDate: new Date(2009, 8 - 1, 1)});
+	$("#enddate").datepicker("option", {altField: '#end_alternate', minDate: new Date(2009, 8 - 1, 2)});		
 });
 </script>
+<script>
+ // remove my GA tracking if you copy from source. thanks. 
+var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-4945154-2']);
+  _gaq.push(['_trackPageview']);
+  _gaq.push(['_trackEvent', 'Demo', 'View', '/demos/analytics_oauth2/index.php' ]);
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ga);
+  })();
 
+</script>
 </head>
 <body>
 <div id="wrapper">
@@ -219,26 +253,35 @@ $(function() {
 
 <?php
 
-if (!isset($_SESSION['accessToken'])){
+if (!isset($_SESSION['analyticAccessToken'])){
 
-$loginUrl = sprintf("https://accounts.google.com/o/oauth2/auth?scope=%s&state=%s&redirect_uri=%s&response_type=code&client_id=%s&access_type=%s",$scope,$state,$redirect_uri,$client_id,$access_type);
+//$loginUrl = sprintf("https://accounts.google.com/o/oauth2/auth?scope=%s&state=%s&redirect_uri=%s&response_type=code&client_id=%s&access_type=%s",$scope,$state,$redirect_uri,$client_id,$access_type);
+$loginUrl = sprintf("https://accounts.google.com/o/oauth2/auth?scope=%s&state=%s&redirect_uri=%s&response_type=code&client_id=%s",$scope,$state,$redirect_uri,$client_id);
 ?>
 	<div class="grid_8 prefix_4 suffix_4"> 
 		<h2>Sign In</h2>
         
         <p><a class="button" href="<?php echo $loginUrl ?>">Login with Google account that has access to analytics using OAuth 2.0</a></p>
         
+        <p><a href="http://www.jensbits.com/">Return to post on jensbits.com</a></p>
 	</div>
 <?php
-	if (isset($_SESSION['accessToken']) && $_SESSION['accessToken'] === "Authentication Failed."){
-		echo "<div class='container'><p class='errorMessage'>Authentication Failed. Please check your log in credentials and try again.</p></div>";
+	if(isset($_REQUEST['error'])){
+		echo "<div class='grid_8 prefix_4 suffix_4'><p class='errorMessage'>Error: " . $_REQUEST['error'] . "</p></div>";
 		session_unset();
-		exit;
 	}
 }
 else
 {
-	$accountObj = call_api($_SESSION['accessToken'],"https://www.googleapis.com/analytics/v3/management/accounts");
+	$accountObj = call_api($_SESSION['analyticAccessToken'],"https://www.googleapis.com/analytics/v3/management/accounts");
+	//refresh token handling - save to db if returned with access token
+	//or retrieve from db if needed to app
+	if(isset($refreshToken)){
+		//dbRefreshToken($accountObj->username,$scope,$refreshToken);
+		dbRefreshToken('Jen Kang',$scope,$refreshToken);
+	}else{
+		$accessTokenFromRefresh = dbRefreshToken('Jen Kang',$scope);
+	}
 	// Get an object with the available accounts
 	$profiles = parse_profile_list($accountObj);
 
@@ -287,16 +330,24 @@ if(isset($_POST['profileid'])){
 	}
 	else
 	{
+		echo "<h1 style='text-transform:uppercase'><span style='color: #999999'>". $full_start_date . " to " . $full_end_date . "</h1>";
+		
+		echo "<hr />";
+		$jenspageviews = parse_data("https://www.googleapis.com/analytics/v3/data/ga?ids=ga:17445729&metrics=ga:pageviews&start-date=".$start_date."&end-date=".$end_date,$accessTokenFromRefresh);
+		echo "<h1 style='text-transform:uppercase'><span style='color: #999999'>jensbits.com</span> (offline access)</h1>";
+		echo "<h2>Pageviews: ".number_format($jenspageviews[0]['pageviews'])."</h2>";
+		$accessTokenFromRefresh = "";
+		echo "<hr />";
+		
 		$visits_graph_type = $_POST['graphtype'];
 
-		echo "<h1 style='text-transform:uppercase'>".$profile_name."<br /><span style='color: #999999'>";
-		echo "" . $full_start_date . " to " . $full_end_date . "</span></h1>";
+		echo "<h1 style='text-transform:uppercase'>".$profile_name."</h1>";
 	
 		// For each website, get visits and visitors
 		$requrlvisits = sprintf("%smetrics=ga:visits,ga:visitors&start-date=%s&end-date=%s",$dataExportUrl,$start_date,$end_date);
 				
-		$visits = parse_data($requrlvisits);
-			
+		$visits = parse_data($requrlvisits,$_SESSION['analyticAccessToken']);
+		
 		foreach($visits as $visit)
 			{
 				echo "<h2>Visits: ".number_format($visit["visits"])."</h2><h2>Visitors: ".number_format($visit["visitors"])."</h2>";
@@ -308,7 +359,7 @@ if(isset($_POST['profileid'])){
 		// For each website, get referrals
 		$requrlreferrers = sprintf("%sdimensions=ga:source&metrics=ga:visits&filters=ga:medium==referral&start-date=%s&end-date=%s&sort=-ga:visits&max-results=10",$dataExportUrl,$start_date,$end_date);
 						
-		$referrers = parse_data($requrlreferrers);	
+		$referrers = parse_data($requrlreferrers,$_SESSION['analyticAccessToken']);	
 				
 		echo "<h1>Referrers</h1>";
 							
@@ -334,7 +385,7 @@ if(isset($_POST['profileid'])){
 			$requrlvisitsgraph = sprintf("%sdimensions=ga:month,ga:year&metrics=ga:visits&sort=ga:year&start-date=%s&end-date=%s",$dataExportUrl,$start_date,$end_date);
 		}
 								
-		$visitsgraph = parse_data($requrlvisitsgraph);				
+		$visitsgraph = parse_data($requrlvisitsgraph,$_SESSION['analyticAccessToken']);				
 ?>
 
 <script>      
@@ -388,8 +439,8 @@ google.setOnLoadCallback(drawBarChart);
 	}
 }	
 ?>
+		</div>
 	</div>
-</div>
 </div>
 </body>
 </html>
