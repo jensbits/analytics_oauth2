@@ -1,6 +1,6 @@
 <?php
 $serverpath = $_SERVER['DOCUMENT_ROOT'];
-$path = $serverpath . "/demos/analytics_oauth2/inc/vars.inc";
+$path = $serverpath . "/PATH/inc/vars.inc";
 include_once($path);
 
 //so session vars can be used
@@ -228,19 +228,7 @@ $(function() {
 	$("#enddate").datepicker("option", {altField: '#end_alternate', minDate: new Date(2009, 8 - 1, 2)});		
 });
 </script>
-<script>
- // remove my GA tracking if you copy from source. thanks. 
-var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-4945154-2']);
-  _gaq.push(['_trackPageview']);
-  _gaq.push(['_trackEvent', 'Demo', 'View', '/demos/analytics_oauth2/index.php' ]);
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ga);
-  })();
 
-</script>
 </head>
 <body>
 <div id="wrapper">
@@ -263,7 +251,6 @@ $loginUrl = sprintf("https://accounts.google.com/o/oauth2/auth?scope=%s&state=%s
         
         <p><a class="button" href="<?php echo $loginUrl ?>">Login with Google account that has access to analytics using OAuth 2.0</a></p>
         
-        <p><a href="http://www.jensbits.com/">Return to post on jensbits.com</a></p>
 	</div>
 <?php
 	if(isset($_REQUEST['error'])){
@@ -278,7 +265,7 @@ else
 	//or retrieve from db if needed to app
 	if(isset($refreshToken)){
 		//dbRefreshToken($accountObj->username,$scope,$refreshToken);
-		dbRefreshToken('Jen Kang',$scope,$refreshToken);
+		dbRefreshToken('NAME',$scope,$refreshToken);
 	}else{
 		$accessTokenFromRefresh = dbRefreshToken('Jen Kang',$scope);
 	}
