@@ -1,6 +1,6 @@
 <?php
 $serverpath = $_SERVER['DOCUMENT_ROOT'];
-$path = $serverpath . "/PATH/vars.inc";
+$path = $serverpath . "/PATH/inc/vars.inc";
 include_once($path);
 
 //so session vars can be used
