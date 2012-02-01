@@ -1,6 +1,8 @@
-** Work in Progress **
+** WIP **
 
 Google Analytics with OAuth 2 & Google Charts PHP
+
+Now with OOP goodness.
 
 Author: jen http://jensbits.com
 
