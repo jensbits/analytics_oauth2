@@ -17,8 +17,6 @@ function classLoader($class)
     }
 /*** register the loader functions ***/
 spl_autoload_register('classLoader');
-//custom exception handler
-set_exception_handler(array("AppExceptionHandling","doException"));
 
 // default vars inc. start and end dates (one month)
 $auth = new GoogleOauth2();
