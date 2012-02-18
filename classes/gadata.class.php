@@ -6,7 +6,7 @@ class Gadata {
 	function __construct($accesstoken){
 		$this->_accesstoken = $accesstoken;	
 	}
-	//calls api and gets the data
+	//calls api and gets the data as object
 	function callApi($url){
 		
 		$curl = curl_init($url);
@@ -55,7 +55,8 @@ class Gadata {
 					$i++;
 				}
 		}
-
+		//unset profiles object, just good practice to free up memory
+		unset($profilesObj);
 		return $profiles;	
 	}
 	
@@ -85,7 +86,8 @@ class Gadata {
 				$r++;
 			}
 		}
-		
+		//unset data object, just good practice to free up memory
+		unset($dataObj);
 		return $results;
 	}
 }

@@ -17,6 +17,8 @@ function classLoader($class)
     }
 /*** register the loader functions ***/
 spl_autoload_register('classLoader');
+//custom exception handler
+set_exception_handler(array("AppExceptionHandling","doException"));
 
 // default vars inc. start and end dates (one month)
 $auth = new GoogleOauth2();
@@ -105,14 +107,19 @@ if(isset($_POST['profileid'])){
 <head>
 <meta charset="utf-8" />
 <title>Google Analytics with OAuth 2 and Google Charts - PHP</title>
+<!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
 <script src="//www.google.com/jsapi"></script>
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
 <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1/jquery-ui.min.js"></script>
 <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1/themes/redmond/jquery-ui.css" />
-<link rel="stylesheet" href="//twitter.github.com/bootstrap/1.4.0/bootstrap.min.css" />
+<link rel="stylesheet" href="/demos/bootstrap/css/bootstrap.min.css" />
 <style type="text/css">
-body {padding-top: 60px;}.input {padding-bottom: 1em;}
+body {padding-top: 60px;}
 </style>
+<link rel="stylesheet" href="/demos/bootstrap/css/bootstrap-responsive.min.css" />
 <script>
 $(function() {
 	$("#startdate, #enddate").datepicker({showOn: 'both', buttonImage: 'SmallCalendar.gif', buttonImageOnly: true, dateFormat: 'dd-MM-yy', maxDate: -1});
@@ -121,7 +128,7 @@ $(function() {
 });
 
  // remove my GA tracking if you copy from source. thanks. 
-/*var _gaq = _gaq || [];
+var _gaq = _gaq || [];
   _gaq.push(['_setAccount', 'UA-4945154-2']);
   _gaq.push(['_trackPageview']);
   _gaq.push(['_trackEvent', 'Demo', 'View', '/demos/analytics_oauth2/index.php' ]);
@@ -129,17 +136,24 @@ $(function() {
     var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
     ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
     (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ga);
-  })();*/
+  })();
 </script>
 </head>
 <body>
-<div class="topbar">
-	<div class="fill">
+<div class="navbar navbar-fixed-top">
+	<div class="navbar-inner">
 		<div class="container">
+        	<a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
           <a class="brand" href="index.php">Google Analytics with OAuth 2 &amp; Google Charts PHP</a>
-          <ul class="nav">
-            <li class="active"><a href="http://www.jensbits.com/">Home</a></li>
-          </ul>
+          <div class="nav-collapse">
+              <ul class="nav">
+                <li class="active"><a href="http://www.jensbits.com/">Home</a></li>
+              </ul>
+          </div>
         </div>
     </div>
 </div>
@@ -151,7 +165,7 @@ if (!isset($_SESSION['analyticAccessToken'])){
 	<h1>Sign In</h1>
     <p>Google Analytics data displayed in Google Charts using OAuth2 authorization.<br />
     Google account must have access to analytics.</p>
-    <p><a class="btn primary large" href="<?php echo $auth->loginurl ?>">Authorize with Google account</a></p>
+    <p><a class="btn btn-primary btn-large" href="<?php echo $auth->loginurl ?>">Authorize with Google account</a></p>
     <p><a href="http://www.jensbits.com/">Return to post on jensbits.com</a></p>
 </div>
 <?php
@@ -163,18 +177,17 @@ else
 {
 ?> 
 <div class="hero-unit">
-	<div class="row">
-        	<div class="span4 offset12"><a class="btn danger" href="?logout=1">Log out</a></div>
+     <div class="row">
+        <h1 class="span8">Account Profiles</h1>
+        <div class="span2"><a class="btn btn-danger" href="?logout=1">Log out</a></div>
      </div>
-	<div class="row">
-		<div class="span16">
-        <h1>Account Profiles</h1>
         <h2>Select Site and Date Range</h2>
-        <form name="siteSelect" id="siteSelect" method="post" action="<?php echo $_SERVER['PHP_SELF'] ?>">
+        <form class="form-horizontal" name="siteSelect" id="siteSelect" method="post" action="<?php echo $_SERVER['PHP_SELF'] ?>">
         <fieldset>
-         <label for="profileid">Select Site:</label>
-         <div class="input">  
-         	<select name="profileid" id="profileid">
+         <div class="control-group">
+        	 <label class="control-label" for="profileid">Select Site:</label>
+             <div class="controls">  
+                 <select name="profileid" id="profileid">
 <?php	
     foreach($profiles as $profile)
 	{
@@ -184,48 +197,43 @@ else
 	}
 ?>
             </select>
+            </div>
          </div>
-            <label for="startdate">Date Range:</label>
-            <div class="input">
-                <div class="inline-inputs">
+            <div class="control-group">
+                <label class="control-label" for="startdate">Date Range:</label>
+                <div class="controls">  
             		<input type="text" id="startdate" name='startdate' readonly="readonly" value="<?php echo $start_date ?>" />
                     to
           			<input type="text" id="enddate" name='enddate' readonly="readonly" value="<?php echo $end_date ?>" />
-                </div>
+            	</div>
             </div>
-            <label for="graphtype">Visitor Graph Type:</label>
-			<div class="input">
-				<ul class="inputs-list">
-					<li>
-					<label>
+            <div class="control-group">
+            <label class="control-label" for="graphtype">Visitor Graph Type:</label>
+            	<div class="controls">  
+					<label class="radio inline">
 					<input id="radio_month" type="radio" name="graphtype" value="month"  <?php if($graph_type === "month") echo "checked='checked'" ?> /><span>Month</span>
 					</label>
-					</li>
-					<li>
-					<label>
+					<label class="radio inline">
 					<input id="radio_day" type="radio" name="graphtype" value="date" <?php if($graph_type === "date") echo "checked='checked'" ?> /><span>Date</span>
             		</label>
-            		</li>
-           	 	</ul>
+                </div>
             </div>
-            <div class="input">
-            	<input class="btn primary" type="submit" value="Submit" />
+            <div class="form-actions">
+            	<input class="btn btn-primary" type="submit" value="Submit" />
             </div>
             </fieldset>
             </form> 
-        </div> 
-	</div> 
 </div>
 <?php	
 }
 if(isset($_POST['profileid'])){
-	echo "<div class='row'><div class='span16'>";
+	echo "<div class='row'><div class='span12'>";
 	if(array_key_exists("Date Range Error",$errors)){
-		echo "<p class='alert-message error'>Date Range Error: " . $errors["Date Range Error"] . "</p>";
+		echo "<p class='alert alert-error'>Date Range Error: " . $errors["Date Range Error"] . "</p>";
 	}
 	echo "<h1>". $start_date . " to " . $end_date . "</h1>";
 	echo "<hr />";
-	echo "<h2>www.jensbits.com (offline access)</h2>";
+	echo "<h2>www.jensbits.com</h2><p>demo of offline access with refresh token</p>";
 	echo "<h3>Pageviews: ".number_format($jenspageviews[0]['pageviews'])."</h3>";
 	$accessTokenFromRefresh = "";
 	echo "<hr />";
@@ -242,17 +250,10 @@ if(isset($_POST['profileid'])){
 	echo "<h3>Referrers</h3>";
 	echo "<div id='piechart_div'></div>";
 					
-	echo "<table class='zebra-striped'><tr><th>Referrer</th><th>Visits</th></tr>";
-	$table_row = 0;
+	echo "<table class='table table-striped'><tr><th>Referrer</th><th>Visits</th></tr>";
 	foreach($referrers as $referrer)
 		{
-			if ($table_row % 2){
-				echo "<tr><td>";
-			} else {
-				echo "<tr><td>";
-			}
-			echo $referrer["source"] . "</td><td>"  . number_format($referrer["visits"]) . "</td.</tr>";
-			$table_row++;	
+			echo "<tr><td>" . $referrer["source"] . "</td><td>"  . number_format($referrer["visits"]) . "</td></tr>";	
 		}
 	echo "</table>";						
 ?>
@@ -300,6 +301,7 @@ google.load("visualization", "1.0", {packages:["corechart"]});
 google.setOnLoadCallback(drawPieChart);
 google.setOnLoadCallback(drawBarChart);
 </script>
+
 	</div>
 </div>
 <?php
@@ -310,5 +312,6 @@ google.setOnLoadCallback(drawBarChart);
 	<p>&copy; jensbits.com <?php echo date("Y"); ?></p>
 </footer>
 </div>
+<script src="/demos/bootstrap/js/bootstrap.min.js"></script>
 </body>
 </html>
