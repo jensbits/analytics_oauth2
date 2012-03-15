@@ -21,12 +21,22 @@ spl_autoload_register('classLoader');
 set_exception_handler(array("AppExceptionHandling","doException"));
 
 // default vars inc. start and end dates (one month)
-$auth = new GoogleOauth2();
 $gaExportUrlPrefix = "https://www.googleapis.com/analytics/v3/data/ga?";
 $errors = array();
+
 $start_date  = date("d-F-Y",strtotime("-31 day"));
 $end_date  = date("d-F-Y",strtotime("-1 day"));
 $graph_type = "month";
+
+$gaApiSettings = array(
+	"clientid" => "YOUR-CLIENT-ID.apps.googleusercontent.com",
+    "clientsecret" => "YOUR-CLIENT-SECRET",
+	"redirecturi" => "YOUR-REDIRECT-URI",
+	"scope" => "https://www.googleapis.com/auth/analytics.readonly",
+	"accesstype" => "online"
+	);
+
+$auth = new GoogleOauth2($gaApiSettings);
 
 foreach($_REQUEST as $key => $value){
 	switch($key){
@@ -126,6 +136,17 @@ $(function() {
 	$("#startdate").datepicker("option",{ minDate: new Date(2009, 8 - 1, 1)});
 	$("#enddate").datepicker("option", {minDate: new Date(2009, 8 - 1, 2)});		
 });
+
+ // remove my GA tracking if you copy from source. thanks. 
+var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-4945154-2']);
+  _gaq.push(['_trackPageview']);
+  _gaq.push(['_trackEvent', 'Demo', 'View', '/demos/analytics_oauth2/index.php' ]);
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ga);
+  })();
 </script>
 </head>
 <body>

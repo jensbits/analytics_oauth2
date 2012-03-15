@@ -1,7 +1,10 @@
 <?php
 class GoogleOauth2 extends ApiSettings {
 	public $refreshtoken;
-	
+
+	function __construct($apiSettings){
+		parent::__construct($apiSettings);
+	}
 	//returns session token for calls to API using oauth 2.0
 	function getOauth2Token($code,$refreshtoken = false) {
 		
