@@ -2,9 +2,7 @@
 session_start();
 /*** nullify any existing autoloads http://www.phpro.org/tutorials/SPL-Autoload.html ***/
 spl_autoload_register(null, false);
-/*** specify extensions that may be loaded ***/
 spl_autoload_extensions('.php, .class.php');
-/*** class Loader ***/
 function classLoader($class){
         $filename = strtolower($class) . '.class.php';
         $file ='classes/' . $filename;
@@ -17,8 +15,8 @@ spl_autoload_register('classLoader');
 $gaExportUrlPrefix = "https://www.googleapis.com/analytics/v3/data/ga?";
 $errors = array();
 
-$start_date  = date("d-F-Y",strtotime("-31 day"));
-$end_date  = date("d-F-Y",strtotime("-1 day"));
+$start  = date("d-F-Y",strtotime("-31 day"));
+$end  = date("d-F-Y",strtotime("-1 day"));
 $graph_type = "month";
 
 $gaApiSettings = array(
@@ -66,7 +64,7 @@ if (isset($_SESSION['analyticAccessToken'])){
 }
 
 // get the data
-if($_SERVER['REQUEST_METHOD'] == 'POST'){	
+if($_SERVER['REQUEST_METHOD'] === 'POST'){	
 	$start = $_POST['startdate'];
 	$end = $_POST['enddate'];
 	if (date("Y-m-d",strtotime($start)) > date("Y-m-d",strtotime($end))){
@@ -178,9 +176,9 @@ else
             <div class="control-group">
                 <label class="control-label" for="startdate">Date Range:</label>
                 <div class="controls">  
-            		<input type="text" id="startdate" name='startdate' readonly="readonly" value="<?php echo $start_date ?>" />
+            		<input type="text" id="startdate" name='startdate' readonly="readonly" value="<?php echo $start ?>" />
                     to
-          			<input type="text" id="enddate" name='enddate' readonly="readonly" value="<?php echo $end_date ?>" />
+          			<input type="text" id="enddate" name='enddate' readonly="readonly" value="<?php echo $end ?>" />
             	</div>
             </div>
             <div class="control-group">
@@ -210,7 +208,7 @@ if(array_key_exists("Date Range Error",$errors)){
 }
 if(isset($profile_id)){
 	echo "<div class='row'><div class='span12'>";
-	echo "<h1>". $start_date . " to " . $end_date . "</h1><hr />";
+	echo "<h1>". $start . " to " . $end . "</h1><hr />";
 	echo "<h2>".$profile_name."</h2>";
 			
 	//visits output
