@@ -5,17 +5,12 @@ spl_autoload_register(null, false);
 /*** specify extensions that may be loaded ***/
 spl_autoload_extensions('.php, .class.php');
 /*** class Loader ***/
-function classLoader($class)
-	{
+function classLoader($class){
         $filename = strtolower($class) . '.class.php';
         $file ='classes/' . $filename;
-        if (!file_exists($file))
-        {
-            return false;
-        }
+        if (!file_exists($file)){return false;}
         include $file;
-    }
-/*** register the loader functions ***/
+}
 spl_autoload_register('classLoader');
 
 // default vars inc. start and end dates (one month)
@@ -33,7 +28,6 @@ $gaApiSettings = array(
 	"scope" => "https://www.googleapis.com/auth/analytics.readonly",
 	"accesstype" => "online"
 	);
-
 $auth = new GoogleOauth2($gaApiSettings);
 
 foreach($_GET as $key => $value){
@@ -72,44 +66,29 @@ if (isset($_SESSION['analyticAccessToken'])){
 }
 
 // get the data
-if(isset($_POST['profileid'])){	
+if($_SERVER['REQUEST_METHOD'] == 'POST'){	
 	$start = $_POST['startdate'];
 	$end = $_POST['enddate'];
 	if (date("Y-m-d",strtotime($start)) > date("Y-m-d",strtotime($end))){
 		$errors["Date Range Error"] = "Date range of (start) " . date("d-F-Y",strtotime($start)) . " to (end) " . date("d-F-Y",strtotime($end)) . " is invalid. Please reselect the dates.";
 	}else{
-		$start_date = $start;
-		$end_date = $end;
+		$profile_name = substr($_POST['profileid'],strpos($_POST['profileid'],"|")+1);
+		$profile_id = substr($_POST['profileid'],0,strpos($_POST['profileid'],"|"));
+		$dataExportUrl = $gaExportUrlPrefix."ids=ga:".$profile_id."&";
+		$graph_type = $_POST['graphtype'];
+		
+		// get visits and visitors
+		$requrlvisits = sprintf("%smetrics=ga:visits,ga:visitors",$dataExportUrl);
+		$visits = $gaData->parseData($requrlvisits,$start,$end);
+		
+		// get visits graph (chart) data
+		$requrlvisitsgraph = sprintf("%sdimensions=ga:%s,ga:year&metrics=ga:visits&sort=ga:year",$dataExportUrl,$graph_type);				
+		$visitsgraph = $gaData->parseData($requrlvisitsgraph,$start,$end);
+	
+		// get referrals
+		$requrlreferrers = sprintf("%sdimensions=ga:source&metrics=ga:visits&filters=ga:medium==referral&sort=-ga:visits&max-results=10",$dataExportUrl);			
+		$referrers = $gaData->parseData($requrlreferrers,$start,$end);
 	}
-	$profile_name = substr($_POST['profileid'],strpos($_POST['profileid'],"|")+1);
-	$profile_id = substr($_POST['profileid'],0,strpos($_POST['profileid'],"|"));
-	$dataExportUrl = $gaExportUrlPrefix."ids=ga:".$profile_id."&";
-	$graph_type = $_POST['graphtype'];
-	
-	//refresh token handling - save to db if returned with access token
-	//or retrieve from db if needed for app
-	if(isset($auth->refreshToken)){
-		//get identifying info to store refresh token with
-		$accountObj = $gaData->parseData("https://www.googleapis.com/analytics/v3/management/accounts");
-		$auth->dbRefreshToken($accountObj->username,$auth->scope,$auth->refreshToken);
-	}else{
-		$accessTokenFromRefresh = $auth->dbRefreshToken("Jen Kang",$auth->scope);
-	}
-	// offline data
-	$gaDataRefreshToken = new Gadata($accessTokenFromRefresh);
-	$jenspageviews = $gaDataRefreshToken->parseData($gaExportUrlPrefix."ids=ga:17445729&metrics=ga:pageviews",$start_date,$end_date);
-	
-	// get visits and visitors
-	$requrlvisits = sprintf("%smetrics=ga:visits,ga:visitors",$dataExportUrl);
-	$visits = $gaData->parseData($requrlvisits,$start_date,$end_date);
-	
-	// get visits graph (chart) data
-	$requrlvisitsgraph = sprintf("%sdimensions=ga:%s,ga:year&metrics=ga:visits&sort=ga:year",$dataExportUrl,$graph_type);				
-	$visitsgraph = $gaData->parseData($requrlvisitsgraph,$start_date,$end_date);
-
-	// get referrals
-	$requrlreferrers = sprintf("%sdimensions=ga:source&metrics=ga:visits&filters=ga:medium==referral&sort=-ga:visits&max-results=10",$dataExportUrl);			
-	$referrers = $gaData->parseData($requrlreferrers,$start_date,$end_date);
 }
 ?>
 <!DOCTYPE html>
@@ -126,9 +105,7 @@ if(isset($_POST['profileid'])){
 <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1/jquery-ui.min.js"></script>
 <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1/themes/redmond/jquery-ui.css" />
 <link rel="stylesheet" href="/demos/bootstrap/css/bootstrap.min.css" />
-<style type="text/css">
-body {padding-top: 60px;}
-</style>
+<style type="text/css">body {padding-top: 60px;}</style>
 <link rel="stylesheet" href="/demos/bootstrap/css/bootstrap-responsive.min.css" />
 <script>
 $(function() {
@@ -192,7 +169,7 @@ else
 	{
 		$selected = " ";
 		if($profile["profileid"] === $profile_id){ $selected = " selected='selected'"; }
-		echo "<option value='" . $profile["profileid"] . "|" . $profile["name"] . "'" . $selected  . ">" . $profile["name"] . "</option>";
+			echo "<option value='" . $profile["profileid"] . "|" . $profile["name"] . "'" . $selected  . ">" . $profile["name"] . "</option>";
 	}
 ?>
             </select>
@@ -222,20 +199,18 @@ else
             </div>
             </fieldset>
             </form> 
+<?php 
+if(array_key_exists("Date Range Error",$errors)){
+	echo "<p class='alert alert-error'>Date Range Error: " . $errors["Date Range Error"] . "</p>";
+    unset($profile_id);
+} 
+?>
 </div>
 <?php	
 }
-if(isset($_POST['profileid'])){
+if(isset($profile_id)){
 	echo "<div class='row'><div class='span12'>";
-	if(array_key_exists("Date Range Error",$errors)){
-		echo "<p class='alert alert-error'>Date Range Error: " . $errors["Date Range Error"] . "</p>";
-	}
-	echo "<h1>". $start_date . " to " . $end_date . "</h1>";
-	echo "<hr />";
-	echo "<h2>www.jensbits.com</h2><p>demo of offline access with refresh token</p>";
-	echo "<h3>Pageviews: ".number_format($jenspageviews[0]['pageviews'])."</h3>";
-	$accessTokenFromRefresh = "";
-	echo "<hr />";
+	echo "<h1>". $start_date . " to " . $end_date . "</h1><hr />";
 	echo "<h2>".$profile_name."</h2>";
 			
 	//visits output
@@ -243,19 +218,20 @@ if(isset($_POST['profileid'])){
 		{
 			echo "<h3>Visits: ".number_format($visit["visits"])."</h3><h3>Visitors: ".number_format($visit["visitors"])."</h3>";
 		}
-	echo "<div id='barchart_div'></div>";
-	
-	//referrers output		
-	echo "<h3>Referrers</h3>";
-	echo "<div id='piechart_div'></div>";
-					
-	echo "<table class='table table-striped'><tr><th>Referrer</th><th>Visits</th></tr>";
+?>
+	<div id="barchart_div"></div>
+	<!--referrers output-->		
+	<h3>Referrers</h3>
+	<div id="piechart_div"></div>		
+	<table class="table table-striped"><tr><th>Referrer</th><th>Visits</th></tr>
+<?php	
 	foreach($referrers as $referrer)
 		{
 			echo "<tr><td>" . $referrer["source"] . "</td><td>"  . number_format($referrer["visits"]) . "</td></tr>";	
 		}
-	echo "</table>";						
 ?>
+	</table>						
+
 <script>      
 function drawPieChart() {
 	var data = new google.visualization.DataTable();
@@ -274,7 +250,7 @@ function drawPieChart() {
 	}
 	?>
 	var chart = new google.visualization.PieChart(document.getElementById('piechart_div'));
-    chart.draw(data, {width: 600, height: 440, is3D: true, title: 'Referrer/Visits'});
+    chart.draw(data, {width: 800, height: 600, is3D: true, title: 'Referrer/Visits'});
 }
 function drawBarChart() {
 	var data = new google.visualization.DataTable();
@@ -293,20 +269,18 @@ function drawBarChart() {
 		}
 		?>
     var chart = new google.visualization.ColumnChart(document.getElementById('barchart_div'));
-    chart.draw(data, {'width': 700, 'height': 400, 'is3D': true, 'title': 'Visits'});
+    chart.draw(data, {'width': 800, 'height': 600, 'is3D': true, 'title': 'Visits'});
 }
 
 google.load("visualization", "1.0", {packages:["corechart"]});
 google.setOnLoadCallback(drawPieChart);
 google.setOnLoadCallback(drawBarChart);
 </script>
-
 	</div>
 </div>
 <?php
 }	
-?>
-		
+?>	
 <footer>
 	<p>&copy; jensbits.com <?php echo date("Y"); ?></p>
 </footer>
