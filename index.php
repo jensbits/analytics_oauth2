@@ -17,8 +17,6 @@ function classLoader($class)
     }
 /*** register the loader functions ***/
 spl_autoload_register('classLoader');
-//custom exception handler
-set_exception_handler(array("AppExceptionHandling","doException"));
 
 // default vars inc. start and end dates (one month)
 $gaExportUrlPrefix = "https://www.googleapis.com/analytics/v3/data/ga?";
@@ -38,7 +36,7 @@ $gaApiSettings = array(
 
 $auth = new GoogleOauth2($gaApiSettings);
 
-foreach($_REQUEST as $key => $value){
+foreach($_GET as $key => $value){
 	switch($key){
 		case "error":
 			//If user refuses to grant access to app, url param of "error" is returned by Google
@@ -50,12 +48,14 @@ foreach($_REQUEST as $key => $value){
 			break;
 		case "code":
 			//Oauth2 code for access token so multiple calls can be made to api
-			$accessTokenResponse = $auth->getOauth2Token($_REQUEST["code"]); 
+			$accessTokenResponse = $auth->getOauth2Token($_GET["code"]); 
 			if(strstr($accessTokenResponse,"Error")){
 				$errors["Access Error"] = $accessTokenResponse;
 				session_unset();
 			}else{
 				$_SESSION['analyticAccessToken'] = $accessTokenResponse;
+				//reload for 'clean' url
+				header("location:".$_SERVER["PHP_SELF"]);
 			}
 			break;
 	}
@@ -136,17 +136,6 @@ $(function() {
 	$("#startdate").datepicker("option",{ minDate: new Date(2009, 8 - 1, 1)});
 	$("#enddate").datepicker("option", {minDate: new Date(2009, 8 - 1, 2)});		
 });
-
- // remove my GA tracking if you copy from source. thanks. 
-var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-4945154-2']);
-  _gaq.push(['_trackPageview']);
-  _gaq.push(['_trackEvent', 'Demo', 'View', '/demos/analytics_oauth2/index.php' ]);
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ga);
-  })();
 </script>
 </head>
 <body>
