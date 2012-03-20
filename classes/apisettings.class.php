@@ -2,16 +2,15 @@
 // sets Google API query string parameters for OAuth2 authorization
 // http://code.google.com/apis/accounts/docs/OAuth2UserAgent.html
 class ApiSettings {
+   public $scope;
+   public $loginurl; 
+   
    protected $clientid;
    protected $clientsecret;
    protected $redirecturi;
    
    private $endpoint = "https://accounts.google.com/o/oauth2/auth";
    private $accesstype;
-   
-   public $scope;
-   public $loginurl;
-
   
    function __construct($apiSettings){
        $this->clientid = $apiSettings["clientid"];

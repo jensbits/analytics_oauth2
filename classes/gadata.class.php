@@ -1,7 +1,8 @@
 <?php
 class Gadata {
-	private $_accesstoken;
 	public $errors = array();
+	
+	private $_accesstoken;
 	
 	function __construct($accesstoken){
 		$this->_accesstoken = $accesstoken;	
