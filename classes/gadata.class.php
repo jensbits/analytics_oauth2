@@ -1,11 +1,15 @@
 <?php
 class Gadata {
 	public $errors = array();
+	public $startDate;
+    public $endDate;
 	
 	private $_accesstoken;
 	
 	function __construct($accesstoken){
 		$this->_accesstoken = $accesstoken;	
+		$this->startDate  = date("d-F-Y",strtotime("-31 day"));
+		$this->endDate  = date("d-F-Y",strtotime("-1 day"));
 	}
 	//calls api and gets the data as object
 	function callApi($url){
@@ -62,10 +66,10 @@ class Gadata {
 	}
 	
 	//returns data as array	
-	function parseData($requestUrl,$startdate,$enddate){
+	function parseData($requestUrl){
 		$r = 0;
 		$results = array();
-		$requestUrl .= "&start-date=" . date("Y-m-d",strtotime($startdate)) . "&end-date=" . date("Y-m-d",strtotime($enddate));
+		$requestUrl .= "&start-date=" . date("Y-m-d",strtotime($this->startDate)) . "&end-date=" . date("Y-m-d",strtotime($this->endDate));
 		$dataObj = $this->callApi($requestUrl);
 		
 		//handle error in api request

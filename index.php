@@ -1,8 +1,10 @@
 <?php
+//TODO: add token expiration
+// add refresh token example (maybe separate app)
 session_start();
 /*** nullify any existing autoloads http://www.phpro.org/tutorials/SPL-Autoload.html ***/
 spl_autoload_register(null, false);
-spl_autoload_extensions('.php, .class.php');
+spl_autoload_extensions('.class.php');
 function classLoader($class){
         $filename = strtolower($class) . '.class.php';
         $file ='classes/' . $filename;
@@ -12,11 +14,7 @@ function classLoader($class){
 spl_autoload_register('classLoader');
 
 // default vars inc. start and end dates (one month)
-$gaExportUrlPrefix = "https://www.googleapis.com/analytics/v3/data/ga?";
 $errors = array();
-
-$start  = date("d-F-Y",strtotime("-31 day"));
-$end  = date("d-F-Y",strtotime("-1 day"));
 $graph_type = "month";
 
 $gaApiSettings = array(
@@ -56,7 +54,7 @@ foreach($_GET as $key => $value){
 if (isset($_SESSION['analyticAccessToken'])){
 	// create google analytics data object
 	$gaData = new Gadata($_SESSION['analyticAccessToken']);
-	// hold in session to prevent additional requests for profiles (they don't change too often)
+	// hold in session to prevent additional requests for profiles (profiles don't change too often)
 	if (!isset($_SESSION['profiles'])){
 		$_SESSION['profiles'] = $gaData->parseProfileList();
 	}
@@ -65,27 +63,29 @@ if (isset($_SESSION['analyticAccessToken'])){
 
 // get the data
 if($_SERVER['REQUEST_METHOD'] === 'POST'){	
-	$start = $_POST['startdate'];
-	$end = $_POST['enddate'];
-	if (date("Y-m-d",strtotime($start)) > date("Y-m-d",strtotime($end))){
-		$errors["Date Range Error"] = "Date range of (start) " . date("d-F-Y",strtotime($start)) . " to (end) " . date("d-F-Y",strtotime($end)) . " is invalid. Please reselect the dates.";
+	$gaData->startDate = $_POST['startdate'];
+	$gaData->endDate = $_POST['enddate'];
+	
+	$graph_type = $_POST['graphtype'];
+	$profile = $_POST['profile'];
+	$profile_id = substr($profile,0,strpos($profile,"|"));
+	$profile_name = substr($profile,strpos($profile,"|")+1);
+	$dataExportUrl = "https://www.googleapis.com/analytics/v3/data/ga?ids=ga:".$profile_id."&";
+	
+	if (date("Y-m-d",strtotime($gaData->startDate)) > date("Y-m-d",strtotime($gaData->endDate))){
+		$errors["Date Range Error"] = "Date range of (start) " . date("d-F-Y",strtotime($gaData->startDate)) . " to (end) " . date("d-F-Y",strtotime($gaData->endDate)) . " is invalid. Please reselect the dates.";
 	}else{
-		$profile_name = substr($_POST['profileid'],strpos($_POST['profileid'],"|")+1);
-		$profile_id = substr($_POST['profileid'],0,strpos($_POST['profileid'],"|"));
-		$dataExportUrl = $gaExportUrlPrefix."ids=ga:".$profile_id."&";
-		$graph_type = $_POST['graphtype'];
-		
 		// get visits and visitors
 		$requrlvisits = sprintf("%smetrics=ga:visits,ga:visitors",$dataExportUrl);
-		$visits = $gaData->parseData($requrlvisits,$start,$end);
+		$visits = $gaData->parseData($requrlvisits);
 		
 		// get visits graph (chart) data
 		$requrlvisitsgraph = sprintf("%sdimensions=ga:%s,ga:year&metrics=ga:visits&sort=ga:year",$dataExportUrl,$graph_type);				
-		$visitsgraph = $gaData->parseData($requrlvisitsgraph,$start,$end);
+		$visitsgraph = $gaData->parseData($requrlvisitsgraph);
 	
 		// get referrals
-		$requrlreferrers = sprintf("%sdimensions=ga:source&metrics=ga:visits&filters=ga:medium==referral&sort=-ga:visits&max-results=10",$dataExportUrl);			
-		$referrers = $gaData->parseData($requrlreferrers,$start,$end);
+		$requrlreferrers = sprintf("%sdimensions=ga:source&metrics=ga:visits&filters=ga:medium==referral&sort=-ga:visits&max-results=25",$dataExportUrl);			
+		$referrers = $gaData->parseData($requrlreferrers);
 	}
 }
 ?>
@@ -147,6 +147,7 @@ if (!isset($_SESSION['analyticAccessToken'])){
 		echo "<p class='alert-message error'>Access Error: " . $errors["Access Error"] . "</p>";
 	}
 }
+//got an access token. time to show the data.
 else
 {
 ?> 
@@ -159,9 +160,9 @@ else
         <form class="form-horizontal" name="siteSelect" id="siteSelect" method="post" action="<?php echo $_SERVER['PHP_SELF'] ?>">
         <fieldset>
          <div class="control-group">
-        	 <label class="control-label" for="profileid">Select Site:</label>
+        	 <label class="control-label" for="profile">Select Site:</label>
              <div class="controls">  
-                 <select name="profileid" id="profileid">
+                 <select name="profile" id="profile">
 <?php	
     foreach($profiles as $profile)
 	{
@@ -176,9 +177,9 @@ else
             <div class="control-group">
                 <label class="control-label" for="startdate">Date Range:</label>
                 <div class="controls">  
-            		<input type="text" id="startdate" name='startdate' readonly="readonly" value="<?php echo $start ?>" />
+            		<input type="text" id="startdate" name='startdate' readonly="readonly" value="<?php echo $gaData->startDate ?>" />
                     to
-          			<input type="text" id="enddate" name='enddate' readonly="readonly" value="<?php echo $end ?>" />
+          			<input type="text" id="enddate" name='enddate' readonly="readonly" value="<?php echo $gaData->endDate ?>" />
             	</div>
             </div>
             <div class="control-group">
@@ -208,8 +209,8 @@ if(array_key_exists("Date Range Error",$errors)){
 }
 if(isset($profile_id)){
 	echo "<div class='row'><div class='span12'>";
-	echo "<h1>". $start . " to " . $end . "</h1><hr />";
-	echo "<h2>".$profile_name."</h2>";
+	echo "<h1>". $gaData->startDate . " to " . $gaData->endDate . "</h1><hr />";
+	echo "<h2>" . $profile_name . "</h2>";
 			
 	//visits output
 	foreach($visits as $visit)
